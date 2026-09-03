@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neustart · Fortbildungsdokumentation &amp; AAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#0c0f18; --surface:#141824; --deep:#080b12; --border:#252d3d;
+    --accent:#f59e0b; --text:#dde3f0; --muted:#7a8599;
+    --danger:#ef4444; --warn:#f59e0b; --ok:#10b981; --purple:#8b5cf6; --blue:#3b82f6;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);min-height:100%}
+  body{font-family:'IBM Plex Sans',sans-serif;-webkit-text-size-adjust:100%}
+  input,textarea,select,button{font-family:inherit;font-size:100%}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(245,158,11,.14);outline:none}
+  button{cursor:pointer}
+  button:hover{filter:brightness(1.12)}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  .wrap{max-width:1140px;margin:0 auto;padding:20px 16px}
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:24px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .side{border-left:1px solid var(--border);padding-left:20px;overflow-y:auto;max-height:calc(100vh - 96px)}
+  .bar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 18px;
+       display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+       position:sticky;top:0;z-index:20}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:14px}
+  .hd{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px}
+  label.l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:block}
+  .in{background:var(--deep);border:1px solid var(--border);border-radius:4px;color:var(--text);
+      padding:9px 12px;font-size:14px;width:100%}
+  textarea.in{resize:vertical;min-height:78px;line-height:1.55}
+  .btn{background:var(--accent);color:#111;border:none;border-radius:4px;padding:10px 22px;
+       font-size:13px;font-weight:800;font-family:'Barlow Condensed',sans-serif;
+       letter-spacing:.08em;text-transform:uppercase}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 14px;font-size:12px}
+  .chip{padding:5px 11px;border-radius:3px;border:1px solid var(--border);background:transparent;
+        color:var(--muted);font-size:12.5px;line-height:1.3}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .num{font-family:'IBM Plex Mono',monospace;font-weight:700}
+  .h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px}
+  .stepper{width:30px;height:30px;border-radius:4px;border:1px solid var(--border);
+           background:transparent;color:var(--text);font-size:17px;line-height:1}
+  .save{font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .side{border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:18px;max-height:none}
+    .grid2,.grid3{grid-template-columns:1fr}
+    .grid4{grid-template-columns:repeat(2,1fr)}
+    .bar{position:static}
+  }
+  @media print{
+    .no-print{display:none!important}
+    body,html{background:#fff!important;color:#111!important}
+    .card{border-color:#bbb!important;background:#fff!important;break-inside:avoid}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ═══ Spieldaten (verifiziert gegen die Spielanleitung, 2. Auflage) ═══ */
+const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+const ROLES = ["Feuerwehr","Polizei","Bauhof","Rettungsdienst","Verwaltung"];
+const ROLE_COL = { Feuerwehr:"#ef4444", Polizei:"#3b82f6", Bauhof:"#eab308",
+                   Rettungsdienst:"#e5e7eb", Verwaltung:"#8b5cf6" };
+const EVENTS = [
+  { k:"Brand",     i:"🔥" },
+  { k:"Krankheit", i:"🏥" },
+  { k:"Vorfall",   i:"⚠️" },
+  { k:"Merk",      i:"📌" },
+];
+const ACTIONS = [
+  { k:"Löschen",     t:"n" }, { k:"Retten",        t:"n" }, { k:"Schützen",      t:"n" },
+  { k:"Informieren", t:"f" }, { k:"Bauen",         t:"f" }, { k:"Sicherstellen", t:"f" },
+  { k:"Suchen",      t:"f" }, { k:"Transportieren",t:"f" }, { k:"Notstrom",      t:"f" },
+];
+const DISTRICTS = ["Altstadt","Rathausviertel","Bahnhofsviertel","Neustadt","Kirchfelden",
+  "Leuberg","Berghausen","Blauheim","Grafeneck","Gänsheiden","Oberried","Wiesbach",
+  "Auhof","In der Höll","Einingen"];
+const SCENARIOS = ["Schwarzbach (leicht)","Zell-Herbertingen (mittel)",
+  "Stephansfeld a.d. Fritzel (schwer)","Eigener Aufbau"];
+const POWER_BONUS = { "":0, "5":5, "6":10, "7":15, "8":20 };
+const BANDS = [
+  { min:10,   t:"Einen Krisenstab wie euch wünscht man sich!" },
+  { min:5,    t:"Die Bevölkerung wird's euch danken" },
+  { min:-5,   t:"Gut gemacht angesichts der Probleme" },
+  { min:-10,  t:"Nicht die völlige Katastrophe" },
+  { min:-999, t:"Vielleicht solltet ihr euer Krisenmanagement verbessern?" },
+];
+const STORE_KEY = "neustart_aar_v2";
+
+const mkPhase = () => ({ rest:[], events:[], actions:{}, ap:{},
+  priorities:"", confidence:3, disputes:"" });
+const mkDay = () => ({ einstieg:"", tag:mkPhase(), nacht:mkPhase(),
+  ev:{ underserved:[], deaths:0, ruins:0, uprisings:0, coordination:null, notes:"" } });
+const mkState = () => ({
+  session:{ scenario:"", date:"", participants:"", facilitator:"", notes:"",
+            zielkarten:false, interventionen:false },
+  days:[mkDay()], curDay:0, curPeriod:"tag",
+  final:{ powerDay:"", districtsClean:"", green:"", shb:"", red:"", uprisings:"",
+          deaths:"", ruins:"", interventionMinus:"", lost:false, lostReason:"" },
+  aar:{ planned:"", happened:"", wentWell:"", wentPoorly:"", different:"", transfer:"" },
+});
+
+/* ═══ 7-Minuten-Timer ═══ */
+function Timer(){
+  const FULL = 7*60;
+  const [left,setLeft] = useState(FULL);
+  const [run,setRun]   = useState(false);
+  const ref = useRef(null);
+
+  const beep = () => {
+    try{
+      const ctx = new (window.AudioContext||window.webkitAudioContext)();
+      [0,0.35,0.7].forEach(off=>{
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value=760; o.type="square";
+        g.gain.setValueAtTime(0.0001,ctx.currentTime+off);
+        g.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+off+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+off+0.25);
+        o.start(ctx.currentTime+off); o.stop(ctx.currentTime+off+0.3);
+      });
+    }catch(e){}
+  };
+
+  useEffect(()=>{
+    if(!run) return;
+    ref.current = setInterval(()=>{
+      setLeft(v=>{
+        if(v<=1){ clearInterval(ref.current); setRun(false); beep(); return 0; }
+        return v-1;
+      });
+    },1000);
+    return ()=>clearInterval(ref.current);
+  },[run]);
+
+  const mm = String(Math.floor(left/60)).padStart(2,"0");
+  const ss = String(left%60).padStart(2,"0");
+  const col = left===0 ? "var(--danger)" : left<=60 ? "var(--warn)" : "var(--text)";
+
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <span className="num" style={{fontSize:22,color:col,minWidth:66}}>{mm}:{ss}</span>
+      <button className="btn ghost" style={{padding:"5px 11px"}} onClick={()=>setRun(r=>!r)}>
+        {run ? "⏸" : "▶"}
+      </button>
+      <button className="btn ghost" style={{padding:"5px 11px"}}
+        onClick={()=>{setRun(false);setLeft(FULL);}}>↺</button>
+    </div>
+  );
+}
+
+function Q({ num, title, hint, value, onChange }){
+  return (
+    <div className="card">
+      <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
+        <span className="num" style={{fontSize:11,color:"var(--accent)",background:"rgba(245,158,11,.09)",
+          border:"1px solid rgba(245,158,11,.22)",borderRadius:3,padding:"3px 8px",marginTop:2}}>{num}</span>
+        <div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:17,fontWeight:700,
+            textTransform:"uppercase",letterSpacing:".06em"}}>{title}</div>
+          {hint && <div style={{fontSize:12,color:"var(--muted)",marginTop:5,lineHeight:1.6}}>{hint}</div>}
+        </div>
+      </div>
+      <textarea className="in" style={{minHeight:92}} placeholder="Antwort hier…"
+        value={value} onChange={e=>onChange(e.target.value)} />
+    </div>
+  );
+}
+
+/* ═══════════════════════ APP ═══════════════════════ */
+function App(){
+  const [phase,setPhase] = useState("setup");
+  const [S,setS] = useState(mkState);
+  const [saved,setSaved] = useState("");
+  const [newEv,setNewEv] = useState({ type:"Brand", district:"Altstadt" });
+  const first = useRef(true);
+
+  useEffect(()=>{
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(raw){
+        const p = JSON.parse(raw);
+        if(p.state){ setS(p.state); setPhase(p.phase||"setup"); }
+      }
+    }catch(e){}
+    first.current = false;
+  },[]);
+
+  useEffect(()=>{
+    if(first.current) return;
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify({ state:S, phase, ts:Date.now() }));
+      setSaved(new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}));
+    }catch(e){ setSaved("Speichern fehlgeschlagen"); }
+  },[S,phase]);
+
+  const day = S.days[S.curDay] || mkDay();
+  const per = S.curPeriod!=="ev" ? day[S.curPeriod] : null;
+  const up = fn => setS(prev => ({ ...prev, ...fn(prev) }));
+  const upDay = fn => setS(prev => ({ ...prev,
+    days: prev.days.map((d,i)=> i===prev.curDay ? fn(d) : d) }));
+  const upPer = (f,v) => upDay(d => ({ ...d, [S.curPeriod]:{ ...d[S.curPeriod], [f]:v } }));
+  const upEv  = (f,v) => upDay(d => ({ ...d, ev:{ ...d.ev, [f]:v } }));
+  const upFin = (f,v) => setS(p => ({ ...p, final:{ ...p.final, [f]:v } }));
+
+  const toggleRest = r => {
+    const l = per.rest;
+    upPer("rest", l.includes(r) ? l.filter(x=>x!==r) : [...l,r]);
+  };
+  const bumpAction = (k,delta) => {
+    const cur = per.actions[k]||0;
+    upPer("actions", { ...per.actions, [k]:Math.max(0,cur+delta) });
+  };
+  const toggleDistrict = d => {
+    const l = day.ev.underserved;
+    upEv("underserved", l.includes(d) ? l.filter(x=>x!==d) : [...l,d]);
+  };
+
+  const go = (dayIdx, period) => {
+    setS(p=>{
+      const days = [...p.days];
+      while(days.length <= dayIdx) days.push(mkDay());
+      return { ...p, days, curDay:dayIdx, curPeriod:period };
+    });
+  };
+  const next = () => {
+    if(S.curPeriod==="tag")   return go(S.curDay,"nacht");
+    if(S.curPeriod==="nacht") return go(S.curDay,"ev");
+    if(S.curDay>=6)           return setPhase("final");
+    go(S.curDay+1,"tag");
+  };
+  const back = () => {
+    if(S.curPeriod==="nacht") return go(S.curDay,"tag");
+    if(S.curPeriod==="ev")    return go(S.curDay,"nacht");
+    if(S.curDay>0)            return go(S.curDay-1,"ev");
+  };
+
+  const n = v => { const x=parseInt(v,10); return isNaN(x)?0:x; };
+  const f = S.final;
+  const plus = n(f.districtsClean) + n(f.green) + n(f.shb)*3 + (POWER_BONUS[f.powerDay]||0);
+  const minus = n(f.deaths) + n(f.red) + n(f.ruins)*3
+              + Math.min(n(f.uprisings),3)*5 + n(f.interventionMinus);
+  const score = plus - minus;
+  const band = BANDS.find(b=>score>=b.min);
+
+  const sum = S.days.reduce((a,d)=>({
+    deaths:a.deaths+(d.ev.deaths||0), ruins:a.ruins+(d.ev.ruins||0),
+    upr:a.upr+(d.ev.uprisings||0), under:a.under+(d.ev.underserved?.length||0),
+  }),{deaths:0,ruins:0,upr:0,under:0});
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `neustart_${S.session.date||"session"}_${(S.session.scenario||"aar").split(" ")[0]}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  const resetAll = () => {
+    if(!confirm("Alle Daten dieser Session löschen und neu beginnen?")) return;
+    localStorage.removeItem(STORE_KEY); setS(mkState()); setPhase("setup");
+  };
+
+  /* ══════════════ SETUP ══════════════ */
+  if(phase==="setup") return (
+    <>
+      <div className="bar">
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:6,height:30,background:"var(--accent)",borderRadius:2}}/>
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,
+              letterSpacing:".07em",color:"var(--accent)",textTransform:"uppercase"}}>
+              Neustart · Fortbildungsdokumentation
+            </div>
+            <div style={{fontSize:10.5,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase"}}>
+              Spielprotokoll · Wertung · After Action Review
+            </div>
+          </div>
+        </div>
+        {saved && <span className="save">Gespeichert {saved}</span>}
+      </div>
+
+      <div className="wrap" style={{maxWidth:680}}>
+        <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:700,
+          textTransform:"uppercase",marginBottom:6}}>Session einrichten</h2>
+        <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24}}>
+          Rahmendaten vor Spielbeginn. Alle Eingaben werden laufend im Browser gespeichert und fließen in die After Action Review ein.
+        </p>
+
+        <div className="card">
+          <div className="grid2" style={{marginBottom:16}}>
+            <div>
+              <label className="l">Szenario / Stadtaufbau</label>
+              <select className="in" value={S.session.scenario}
+                onChange={e=>up(p=>({session:{...p.session,scenario:e.target.value}}))}>
+                <option value="">— bitte wählen —</option>
+                {SCENARIOS.map(x=><option key={x}>{x}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="l">Datum</label>
+              <input className="in" type="date" value={S.session.date}
+                onChange={e=>up(p=>({session:{...p.session,date:e.target.value}}))}/>
+            </div>
+            <div>
+              <label className="l">Teilnehmende</label>
+              <input className="in" type="text" placeholder="z. B. 5 Personen, Führungskräfte Kommune"
+                value={S.session.participants}
+                onChange={e=>up(p=>({session:{...p.session,participants:e.target.value}}))}/>
+            </div>
+            <div>
+              <label className="l">Seminarleitung</label>
+              <input className="in" type="text" placeholder="Name"
+                value={S.session.facilitator}
+                onChange={e=>up(p=>({session:{...p.session,facilitator:e.target.value}}))}/>
+            </div>
+          </div>
+          <label className="l">Lernziele / Vorbemerkungen</label>
+          <textarea className="in"
+            placeholder="Welche Schwerpunkte sollen die Teilnehmenden mitnehmen? Z. B. Priorisierung unter Zeitdruck, Ressourcenmanagement, Kommunikation im Stab."
+            value={S.session.notes}
+            onChange={e=>up(p=>({session:{...p.session,notes:e.target.value}}))}/>
+        </div>
+
+        <div className="card">
+          <div className="hd">Optionale Regeln (Anleitung S. 19)</div>
+          {[["zielkarten","Ziel-Karten — jede Rolle schützt heimlich ein bevorzugtes Viertel"],
+            ["interventionen","Interventions-Karten — Vorteile gegen Minuspunkte"]].map(([k,t])=>(
+            <label key={k} style={{display:"flex",gap:10,alignItems:"flex-start",
+              marginBottom:9,fontSize:13,color:"var(--muted)",cursor:"pointer",lineHeight:1.5}}>
+              <input type="checkbox" checked={S.session[k]} style={{marginTop:3,accentColor:"#f59e0b"}}
+                onChange={e=>up(p=>({session:{...p.session,[k]:e.target.checked}}))}/>
+              <span>{t}</span>
+            </label>
+          ))}
+          <div style={{fontSize:11.5,color:"var(--muted)",marginTop:8,lineHeight:1.6,fontStyle:"italic"}}>
+            Mit Ziel-Karten wird die AAR um die Frage divergierender Interessen im Krisenstab erweitert.
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:20,marginBottom:40}}>
+          <button className="btn" onClick={()=>setPhase("game")}>Spiel starten →</button>
+          <button className="btn ghost" onClick={resetAll}>Session zurücksetzen</button>
+        </div>
+      </div>
+    </>
+  );
+
+  /* ══════════════ SPIEL ══════════════ */
+  if(phase==="game"){
+    const pLabel = S.curPeriod==="tag" ? "Tag" : S.curPeriod==="nacht" ? "Nacht" : "Wochentagesende";
+    const pCol   = S.curPeriod==="tag" ? "var(--blue)" : S.curPeriod==="nacht" ? "var(--purple)" : "var(--accent)";
+
+    return (
+      <>
+        <div className="bar">
+          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:17,fontWeight:700,
+              letterSpacing:".07em",color:"var(--accent)",textTransform:"uppercase"}}>◈ Neustart</span>
+            <div className="chips" style={{alignItems:"center"}}>
+              {DAYS.map((d,i)=>(
+                <button key={i} title={d} onClick={()=>go(i,"tag")}
+                  style={{width:i===S.curDay?11:8,height:i===S.curDay?11:8,borderRadius:"50%",
+                    padding:0,border:"1px solid var(--border)",
+                    background:i===S.curDay?pCol:i<S.curDay?"#374151":"var(--border)"}}/>
+              ))}
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,
+                marginLeft:6,letterSpacing:".04em"}}>{DAYS[S.curDay]}</span>
+              <span className="chip" style={{borderColor:pCol,color:pCol,marginLeft:4}}>{pLabel}</span>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            {S.curPeriod!=="ev" && <Timer/>}
+            <button className="btn ghost" onClick={()=>setPhase("final")}>Endabrechnung →</button>
+          </div>
+        </div>
+
+        <div className="wrap">
+          <div className="layout">
+            <div>
+              {S.curPeriod==="tag" && (
+                <div className="card" style={{borderColor:"rgba(245,158,11,.22)"}}>
+                  <label className="l">Einstiegs-Karte {DAYS[S.curDay]} — Kürzel und Kernaussage</label>
+                  <input className="in" placeholder='z. B. "E1-2 — veralteter Vorsorgeplan, −1 AP für Verwaltung, Polizei, Bauhof"'
+                    value={day.einstieg} onChange={e=>upDay(d=>({...d,einstieg:e.target.value}))}/>
+                </div>
+              )}
+
+              {S.curPeriod!=="ev" ? (
+                <>
+                  <h3 className="h3" style={{color:pCol}}>{DAYS[S.curDay]} — Zeiteinheit {pLabel}</h3>
+
+                  <div className="card">
+                    <div className="hd">Vorentscheidung: Erholung — welche Teams pausieren?</div>
+                    <div className="chips">
+                      {ROLES.map(r=>{
+                        const on = per.rest.includes(r);
+                        return (
+                          <button key={r} className="chip" onClick={()=>toggleRest(r)}
+                            style={{borderColor:on?ROLE_COL[r]:"var(--border)",
+                              color:on?ROLE_COL[r]:"var(--muted)",
+                              background:on?ROLE_COL[r]+"22":"transparent",fontWeight:on?600:400}}>
+                            {on?"⏸ ":""}{r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{fontSize:11.5,color:"var(--muted)",marginTop:9,lineHeight:1.5}}>
+                      Pausierende Teams stehen in dieser Zeiteinheit nicht zur Verfügung, gewinnen aber Aktionspunkte zurück.
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <div className="hd">Ereignisse dieser Zeiteinheit</div>
+                    <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                      <select className="in" style={{width:"auto",flex:"0 0 auto"}} value={newEv.type}
+                        onChange={e=>setNewEv(v=>({...v,type:e.target.value}))}>
+                        {EVENTS.map(e=><option key={e.k} value={e.k}>{e.i} {e.k}</option>)}
+                      </select>
+                      <select className="in" style={{flex:"1 1 150px"}} value={newEv.district}
+                        onChange={e=>setNewEv(v=>({...v,district:e.target.value}))}>
+                        {DISTRICTS.map(d=><option key={d}>{d}</option>)}
+                      </select>
+                      <button className="btn" style={{padding:"8px 15px"}}
+                        onClick={()=>upPer("events",[...per.events,{...newEv,id:Date.now()}])}>＋</button>
+                    </div>
+                    {per.events.length===0
+                      ? <div style={{fontSize:13,color:"var(--muted)",fontStyle:"italic"}}>Noch keine Ereignisse erfasst.</div>
+                      : <div className="chips">
+                          {per.events.map(ev=>(
+                            <span key={ev.id} className="chip" style={{color:"var(--text)",background:"var(--deep)"}}>
+                              {EVENTS.find(x=>x.k===ev.type)?.i} {ev.type}
+                              <span style={{color:"var(--accent)"}}> · {ev.district}</span>
+                              <button onClick={()=>upPer("events",per.events.filter(x=>x.id!==ev.id))}
+                                style={{background:"none",border:"none",color:"var(--muted)",
+                                  fontSize:15,marginLeft:6,padding:0,lineHeight:1}}>×</button>
+                            </span>
+                          ))}
+                        </div>}
+                  </div>
+
+                  <div className="card">
+                    <div className="hd">Durchgeführte Aktionen — antippen zum Hochzählen</div>
+                    <div className="chips">
+                      {ACTIONS.map(a=>{
+                        const c = per.actions[a.k]||0;
+                        const col = a.t==="n" ? "var(--blue)" : "var(--ok)";
+                        return (
+                          <span key={a.k} style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                            <button className="chip" onClick={()=>bumpAction(a.k,1)}
+                              style={{borderColor:c?col:"var(--border)",color:c?col:"var(--muted)",
+                                background:c?col+"1e":"transparent",fontWeight:c?600:400}}>
+                              {a.k}{c>0 && <b className="num" style={{marginLeft:6}}>{c}</b>}
+                            </button>
+                            {c>0 && <button onClick={()=>bumpAction(a.k,-1)}
+                              style={{background:"none",border:"none",color:"var(--muted)",fontSize:15,padding:0}}>−</button>}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div style={{fontSize:11.5,color:"var(--muted)",marginTop:10}}>
+                      <span style={{color:"var(--blue)"}}>Blau</span> = notwendige Aktionen ·{" "}
+                      <span style={{color:"var(--ok)"}}>Grün</span> = freiwillige Aktionen
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <div className="hd">Aktionspunkte am Ende der Zeiteinheit (0–12 je Rolle)</div>
+                    <div className="grid4">
+                      {ROLES.map(r=>(
+                        <div key={r}>
+                          <label className="l" style={{color:ROLE_COL[r],opacity:.9}}>{r}</label>
+                          <input className="in num" type="number" min="0" max="12" placeholder="–"
+                            style={{textAlign:"center",padding:"7px 4px"}}
+                            value={per.ap[r] ?? ""}
+                            onChange={e=>upPer("ap",{...per.ap,[r]:e.target.value})}/>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontSize:11.5,color:"var(--muted)",marginTop:10,lineHeight:1.5}}>
+                      Erschöpfte Teams sind die häufigste Ursache gescheiterter Einsätze — hier wird das nachvollziehbar.
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <label className="l">Was hat der Krisenstab priorisiert?</label>
+                    <textarea className="in"
+                      placeholder="Welche Entscheidungen wurden getroffen? Was wurde bewusst liegengelassen?"
+                      value={per.priorities} onChange={e=>upPer("priorities",e.target.value)}/>
+                  </div>
+
+                  <div className="card grid2">
+                    <div>
+                      <label className="l">Entscheidungssicherheit der Gruppe</label>
+                      <div style={{display:"flex",gap:6,marginBottom:7}}>
+                        {[1,2,3,4,5].map(x=>(
+                          <button key={x} onClick={()=>upPer("confidence",x)} className="num"
+                            style={{width:36,height:36,borderRadius:4,fontSize:13,
+                              border:`1px solid ${x<=per.confidence?"var(--accent)":"var(--border)"}`,
+                              background:x<=per.confidence?"rgba(245,158,11,.12)":"transparent",
+                              color:x<=per.confidence?"var(--accent)":"var(--muted)"}}>{x}</button>
+                        ))}
+                      </div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>1 = sehr unsicher · 5 = sehr sicher</div>
+                    </div>
+                    <div>
+                      <label className="l">Was war unklar oder umstritten?</label>
+                      <textarea className="in" style={{minHeight:64}}
+                        placeholder="Meinungsverschiedenheiten, Informationsmangel, Rollenunklarheiten…"
+                        value={per.disputes} onChange={e=>upPer("disputes",e.target.value)}/>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="h3" style={{color:"var(--accent)"}}>{DAYS[S.curDay]} — Wochentagesende</h3>
+
+                  <div className="card">
+                    <label className="l">Viertel mit Unterversorgung (Bedarfs-Felder nicht gedeckt)</label>
+                    <div className="chips">
+                      {DISTRICTS.map(d=>{
+                        const on = day.ev.underserved.includes(d);
+                        return <button key={d} className="chip" onClick={()=>toggleDistrict(d)}
+                          style={{borderColor:on?"var(--danger)":"var(--border)",
+                            color:on?"var(--danger)":"var(--muted)",
+                            background:on?"rgba(239,68,68,.14)":"transparent",fontWeight:on?600:400}}>{d}</button>;
+                      })}
+                    </div>
+                    <div style={{fontSize:11.5,color:"var(--muted)",marginTop:9,lineHeight:1.5}}>
+                      Grafeneck gesondert prüfen: Fehlt dort der Treibstoff für die Notstromversorgung des Krankenhauses,
+                      werden sofort vier Todesfall-Marker und vier rote Spielfiguren fällig.
+                    </div>
+                  </div>
+
+                  <div className="card grid3">
+                    {[["deaths","☠ Todesfälle heute","var(--danger)"],
+                      ["ruins","🏚 Ruinen heute","var(--warn)"],
+                      ["uprisings","🚨 Aufstände heute","var(--purple)"]].map(([k,t,col])=>(
+                      <div key={k} style={{textAlign:"center"}}>
+                        <div className="l" style={{marginBottom:10}}>{t}</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+                          <button className="stepper" onClick={()=>upEv(k,Math.max(0,day.ev[k]-1))}>−</button>
+                          <span className="num" style={{fontSize:28,color:col,minWidth:30}}>{day.ev[k]}</span>
+                          <button className="stepper" onClick={()=>upEv(k,day.ev[k]+1)}>＋</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="card">
+                    <label className="l">Koordination im Krisenstab heute</label>
+                    <div className="chips" style={{marginBottom:14}}>
+                      {[["gut","var(--ok)","✓ Gut"],["gemischt","var(--warn)","~ Gemischt"],
+                        ["schlecht","var(--danger)","✗ Problematisch"]].map(([v,col,t])=>{
+                        const on = day.ev.coordination===v;
+                        return <button key={v} className="chip" onClick={()=>upEv("coordination",v)}
+                          style={{padding:"7px 15px",fontSize:13,borderColor:on?col:"var(--border)",
+                            color:on?col:"var(--muted)",background:on?col+"22":"transparent",
+                            fontWeight:on?600:400}}>{t}</button>;
+                      })}
+                    </div>
+                    <label className="l">Beobachtungen zum Tagesabschluss</label>
+                    <textarea className="in"
+                      placeholder="Dynamiken im Stab, kritische Momente, besonders gute oder riskante Entscheidungen…"
+                      value={day.ev.notes} onChange={e=>upEv("notes",e.target.value)}/>
+                  </div>
+
+                  {S.curDay>=4 && (
+                    <div className="card" style={{borderColor:"rgba(16,185,129,.3)"}}>
+                      <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
+                        <strong style={{color:"var(--ok)"}}>Ab Freitag (Tag 5)</strong> wird vor der Einstiegs-Karte
+                        gewürfelt, ob der Strom zurückkehrt: Freitag mindestens 11, Samstag mindestens 9,
+                        Sonntag mindestens 6. Am Montag darauf (Tag 8) gelingt sie in jedem Fall.
+                        Das Ergebnis wird in der Endabrechnung erfasst.
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div style={{display:"flex",gap:10,justifyContent:"space-between",marginTop:6,marginBottom:36}}>
+                <button className="btn ghost" onClick={back}
+                  disabled={S.curDay===0 && S.curPeriod==="tag"}
+                  style={{opacity:(S.curDay===0&&S.curPeriod==="tag")?.35:1}}>← Zurück</button>
+                <button className="btn" onClick={next}>
+                  {S.curPeriod==="tag" ? "Nacht →"
+                   : S.curPeriod==="nacht" ? "Wochentagesende →"
+                   : S.curDay>=6 ? "Endabrechnung →" : `${DAYS[S.curDay+1]} →`}
+                </button>
+              </div>
+            </div>
+
+            <div className="side">
+              <div className="hd" style={{marginBottom:16}}>Spielprotokoll</div>
+              {S.days.map((d,di)=>(
+                <div key={di} style={{marginBottom:16}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,fontWeight:700,
+                    letterSpacing:".06em",textTransform:"uppercase",paddingBottom:5,marginBottom:7,
+                    borderBottom:"1px solid var(--border)",
+                    color:di===S.curDay?"var(--accent)":"var(--muted)"}}>
+                    {DAYS[di]}
+                  </div>
+                  {["tag","nacht"].map(p=>{
+                    const x = d[p];
+                    const acts = Object.entries(x.actions).filter(([,v])=>v>0);
+                    if(!x.events.length && !x.priorities && !acts.length) return null;
+                    return (
+                      <div key={p} style={{marginBottom:8,paddingLeft:8,
+                        borderLeft:`2px solid ${p==="tag"?"rgba(59,130,246,.35)":"rgba(139,92,246,.35)"}`}}>
+                        <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",
+                          letterSpacing:".1em",marginBottom:3}}>
+                          {p==="tag"?"Tag":"Nacht"}
+                          {x.confidence<=2 && <span style={{color:"var(--danger)",marginLeft:6}}>⚠ unsicher</span>}
+                          {x.rest.length>0 && <span style={{color:"var(--warn)",marginLeft:6}}>⏸ {x.rest.length}</span>}
+                        </div>
+                        {x.events.map(e=>(
+                          <div key={e.id} style={{fontSize:11.5,marginBottom:1}}>
+                            {EVENTS.find(y=>y.k===e.type)?.i} <span style={{color:"var(--accent)"}}>{e.district}</span>
+                          </div>
+                        ))}
+                        {acts.length>0 && (
+                          <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>
+                            {acts.map(([k,v])=>`${k}·${v}`).join("  ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(d.ev.deaths>0||d.ev.ruins>0||d.ev.uprisings>0) && (
+                    <div className="chips" style={{marginTop:4}}>
+                      {d.ev.deaths>0    && <span className="chip" style={{fontSize:10,padding:"2px 7px",color:"var(--danger)",borderColor:"rgba(239,68,68,.4)"}}>☠ {d.ev.deaths}</span>}
+                      {d.ev.ruins>0     && <span className="chip" style={{fontSize:10,padding:"2px 7px",color:"var(--warn)",borderColor:"rgba(245,158,11,.4)"}}>🏚 {d.ev.ruins}</span>}
+                      {d.ev.uprisings>0 && <span className="chip" style={{fontSize:10,padding:"2px 7px",color:"var(--purple)",borderColor:"rgba(139,92,246,.4)"}}>🚨 {d.ev.uprisings}</span>}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="save" style={{marginTop:10}}>{saved && `Gespeichert ${saved}`}</div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  /* ══════════════ ENDABRECHNUNG ══════════════ */
+  if(phase==="final"){
+    const Fld = ({k,label,hint}) => (
+      <div>
+        <label className="l">{label}</label>
+        <input className="in num" type="number" min="0" placeholder="0"
+          value={S.final[k]} onChange={e=>upFin(k,e.target.value)}/>
+        {hint && <div style={{fontSize:10.5,color:"var(--muted)",marginTop:4}}>{hint}</div>}
+      </div>
+    );
+    return (
+      <>
+        <div className="bar">
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:19,fontWeight:700,
+            letterSpacing:".07em",color:"var(--accent)",textTransform:"uppercase"}}>◈ Endabrechnung</span>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn ghost" onClick={()=>setPhase("game")}>← Spiel</button>
+            <button className="btn" onClick={()=>setPhase("aar")}>Zur AAR →</button>
+          </div>
+        </div>
+
+        <div className="wrap" style={{maxWidth:760}}>
+          <h2 className="h3" style={{fontSize:26,marginTop:6}}>Wertung nach Spielende</h2>
+          <p style={{color:"var(--muted)",fontSize:13.5,lineHeight:1.7,marginBottom:20}}>
+            Zustand des Spielplans nach dem letzten Wochentag erfassen. Die Punkte werden nach der
+            Wertungstabelle der Anleitung (S. 13) automatisch berechnet.
+          </p>
+
+          <div className="card" style={{borderColor:"rgba(239,68,68,.3)"}}>
+            <label style={{display:"flex",gap:10,alignItems:"center",fontSize:13.5,cursor:"pointer"}}>
+              <input type="checkbox" checked={S.final.lost} style={{accentColor:"#ef4444"}}
+                onChange={e=>upFin("lost",e.target.checked)}/>
+              <span>Das Spiel wurde <strong>verloren</strong></span>
+            </label>
+            {S.final.lost && (
+              <div style={{marginTop:12}}>
+                <label className="l">Verlustgrund</label>
+                <select className="in" value={S.final.lostReason}
+                  onChange={e=>upFin("lostReason",e.target.value)}>
+                  <option value="">— wählen —</option>
+                  <option>Aufstand-Marker in vier oder mehr Vierteln</option>
+                  <option>Selbsthilfe-Basis im Rathausviertel zerstört</option>
+                </select>
+                <div style={{fontSize:11.5,color:"var(--muted)",marginTop:8,lineHeight:1.5}}>
+                  Bei einer Niederlage entfällt die Punktewertung. Die Felder unten können trotzdem
+                  ausgefüllt werden, um in der AAR über den Verlauf zu sprechen.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="hd" style={{color:"var(--ok)"}}>Erfolge (Pluspunkte)</div>
+            <div className="grid2">
+              <div>
+                <label className="l">Stromversorgung wiederhergestellt an Tag</label>
+                <select className="in" value={S.final.powerDay}
+                  onChange={e=>upFin("powerDay",e.target.value)}>
+                  <option value="">— nicht wiederhergestellt —</option>
+                  <option value="5">Tag 5 · Freitag (+5)</option>
+                  <option value="6">Tag 6 · Samstag (+10)</option>
+                  <option value="7">Tag 7 · Sonntag (+15)</option>
+                  <option value="8">Tag 8 · Montag darauf (+20)</option>
+                </select>
+              </div>
+              <Fld k="districtsClean" label="Viertel ohne rote Spielfigur (je +1)" hint="Von 15 Vierteln"/>
+              <Fld k="green" label="Grüne Spielfiguren auf dem Plan (je +1)"/>
+              <Fld k="shb"   label="Errichtete Selbsthilfe-Basen (je +3)"/>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="hd" style={{color:"var(--danger)"}}>Niederlagen (Minuspunkte)</div>
+            <div className="grid2">
+              <Fld k="deaths" label="Todesfall-Marker (je −1)" hint={`Protokoll ergibt ${sum.deaths}`}/>
+              <Fld k="red"    label="Rote Spielfiguren (je −1)"/>
+              <Fld k="ruins"  label="Ruinen-Marker (je −3)" hint={`Protokoll ergibt ${sum.ruins}`}/>
+              <Fld k="uprisings" label="Aufstand-Marker (je −5, max. 3)" hint={`Protokoll ergibt ${sum.upr}`}/>
+              {S.session.interventionen &&
+                <Fld k="interventionMinus" label="Minuspunkte genutzter Interventions-Karten"/>}
+            </div>
+          </div>
+
+          <div className="card" style={{borderColor:"rgba(245,158,11,.35)",background:"var(--deep)",textAlign:"center",padding:26}}>
+            {S.final.lost ? (
+              <>
+                <div style={{fontSize:34,marginBottom:8}}>✗</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:700,
+                  textTransform:"uppercase",color:"var(--danger)"}}>Spiel verloren</div>
+                {S.final.lostReason && <div style={{fontSize:13,color:"var(--muted)",marginTop:8}}>{S.final.lostReason}</div>}
+              </>
+            ) : (
+              <>
+                <div className="l" style={{marginBottom:6}}>Erfolge {plus} − Niederlagen {minus}</div>
+                <div className="num" style={{fontSize:56,lineHeight:1,
+                  color: score>=5 ? "var(--ok)" : score>=-5 ? "var(--accent)" : "var(--danger)"}}>
+                  {score>0?"+":""}{score}
+                </div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:19,fontWeight:700,
+                  textTransform:"uppercase",letterSpacing:".04em",marginTop:12,lineHeight:1.35}}>
+                  {band.t}
+                </div>
+              </>
+            )}
+          </div>
+
+          {S.session.zielkarten && (
+            <div className="card">
+              <div className="hd">Ziel-Karten — Einzelwertung</div>
+              <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
+                Jede Person zieht in ihrem Zielviertel alle Schäden von 20 Punkten ab
+                (Ruine −3, Todesfall −1, rote Spielfigur −1). Bei einem Aufstand im Zielviertel gibt es keine Punkte.
+              </div>
+              <textarea className="in" style={{marginTop:12}}
+                placeholder="z. B. Feuerwehr / Altstadt: 20 − 3 (Ruine) − 2 (rote Figuren) = 15"
+                value={S.aar.zielNotes||""}
+                onChange={e=>up(p=>({aar:{...p.aar,zielNotes:e.target.value}}))}/>
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:10,marginTop:16,marginBottom:40,flexWrap:"wrap"}}>
+            <button className="btn" onClick={()=>setPhase("aar")}>Zur After Action Review →</button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  /* ══════════════ AAR ══════════════ */
+  if(phase==="aar"){
+    const allEv = S.days.flatMap((d,i)=>[
+      ...d.tag.events.map(e=>({...e,day:DAYS[i],p:"Tag"})),
+      ...d.nacht.events.map(e=>({...e,day:DAYS[i],p:"Nacht"})),
+    ]);
+    const actTotals = {};
+    S.days.forEach(d=>["tag","nacht"].forEach(p=>
+      Object.entries(d[p].actions).forEach(([k,v])=>{ actTotals[k]=(actTotals[k]||0)+v; })));
+    const unused = ACTIONS.filter(a=>!actTotals[a.k]).map(a=>a.k);
+    const lowConf = S.days.flatMap((d,i)=>[
+      d.tag.confidence<=2   ? `${DAYS[i]} Tag`   : null,
+      d.nacht.confidence<=2 ? `${DAYS[i]} Nacht` : null,
+    ].filter(Boolean));
+    const disputes = S.days.flatMap((d,i)=>[
+      d.tag.disputes   ? `${DAYS[i]} · Tag: ${d.tag.disputes}`     : null,
+      d.nacht.disputes ? `${DAYS[i]} · Nacht: ${d.nacht.disputes}` : null,
+    ].filter(Boolean));
+    const restTotal = S.days.reduce((a,d)=>a+d.tag.rest.length+d.nacht.rest.length,0);
+
+    return (
+      <>
+        <div className="bar no-print">
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:19,fontWeight:700,
+              letterSpacing:".07em",color:"var(--accent)",textTransform:"uppercase"}}>
+              ◈ After Action Review — {S.session.scenario||"Neustart"}
+            </div>
+            <div style={{fontSize:10.5,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginTop:2}}>
+              {[S.session.date,S.session.facilitator,S.session.participants].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button className="btn ghost" onClick={()=>setPhase("final")}>← Wertung</button>
+            <button className="btn ghost" onClick={exportJSON}>⤓ JSON</button>
+            <button className="btn ghost" onClick={resetAll}>Neue Session</button>
+            <button className="btn" onClick={()=>window.print()}>⎙ Drucken / PDF</button>
+          </div>
+        </div>
+
+        <div className="wrap" style={{maxWidth:800}}>
+          <div className="card" style={{borderColor:"rgba(245,158,11,.3)",background:"var(--deep)"}}>
+            <div className="hd" style={{color:"var(--accent)"}}>Ergebnis</div>
+            {S.final.lost ? (
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:21,fontWeight:700,
+                textTransform:"uppercase",color:"var(--danger)"}}>
+                Spiel verloren{S.final.lostReason && ` — ${S.final.lostReason}`}
+              </div>
+            ) : (
+              <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}>
+                <span className="num" style={{fontSize:40,
+                  color:score>=5?"var(--ok)":score>=-5?"var(--accent)":"var(--danger)"}}>
+                  {score>0?"+":""}{score}
+                </span>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:17,fontWeight:700,
+                  textTransform:"uppercase",letterSpacing:".04em"}}>{band.t}</span>
+              </div>
+            )}
+            <div className="grid4" style={{marginTop:18}}>
+              {[["☠",sum.deaths,"Todesfälle","var(--danger)"],
+                ["🏚",sum.ruins,"Ruinen","var(--warn)"],
+                ["🚨",sum.upr,"Aufstände","var(--purple)"],
+                ["📦",sum.under,"Unterversorgung\n(Viertel-Tage)","#6b7280"]].map(([ic,v,t,col])=>(
+                <div key={t} style={{textAlign:"center",padding:12,background:"var(--surface)",
+                  border:"1px solid var(--border)",borderRadius:6}}>
+                  <div style={{fontSize:17}}>{ic}</div>
+                  <div className="num" style={{fontSize:24,color:col}}>{v}</div>
+                  <div style={{fontSize:9.5,color:"var(--muted)",textTransform:"uppercase",
+                    letterSpacing:".06em",marginTop:3,whiteSpace:"pre-line",lineHeight:1.3}}>{t}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="hd">Aktionsprofil des Krisenstabs</div>
+            {Object.keys(actTotals).length===0
+              ? <div style={{fontSize:13,color:"var(--muted)",fontStyle:"italic"}}>Keine Aktionen erfasst.</div>
+              : <div className="chips">
+                  {ACTIONS.filter(a=>actTotals[a.k]).sort((a,b)=>actTotals[b.k]-actTotals[a.k]).map(a=>{
+                    const col = a.t==="n"?"var(--blue)":"var(--ok)";
+                    return <span key={a.k} className="chip"
+                      style={{borderColor:col,color:col,background:col+"18"}}>
+                      {a.k} <b className="num" style={{marginLeft:5}}>{actTotals[a.k]}</b></span>;
+                  })}
+                </div>}
+            {unused.length>0 && (
+              <div style={{marginTop:12,fontSize:12.5,color:"var(--warn)",lineHeight:1.6}}>
+                ⚠ Nie eingesetzt: {unused.join(", ")}. Das ist oft der ergiebigste Gesprächseinstieg —
+                besonders bei „Informieren“ und „Bauen“, die langfristig entlasten.
+              </div>
+            )}
+            {restTotal===0 && (
+              <div style={{marginTop:8,fontSize:12.5,color:"var(--warn)",lineHeight:1.6}}>
+                ⚠ Kein Team hat je eine Erholungspause bekommen.
+              </div>
+            )}
+          </div>
+
+          {disputes.length>0 && (
+            <div className="card" style={{borderColor:"rgba(245,158,11,.3)"}}>
+              <div className="hd" style={{color:"var(--warn)"}}>⚠ Protokollierte Unklarheiten und Kontroversen</div>
+              {disputes.map((d,i)=>(
+                <div key={i} style={{fontSize:13,color:"var(--muted)",marginBottom:6,paddingLeft:12,
+                  borderLeft:"2px solid rgba(245,158,11,.3)",lineHeight:1.55}}>{d}</div>
+              ))}
+            </div>
+          )}
+
+          {allEv.length>0 && (
+            <div className="card">
+              <div className="hd">Ereignisprotokoll ({allEv.length})</div>
+              <div className="chips">
+                {allEv.map((e,i)=>(
+                  <span key={i} className="chip" style={{background:"var(--deep)",fontSize:11.5}}>
+                    <span style={{color:"var(--text)"}}>{EVENTS.find(x=>x.k===e.type)?.i} {e.type}</span>
+                    <span style={{color:"var(--accent)"}}> · {e.district}</span>
+                    <span style={{fontSize:10}}> · {e.day} {e.p}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{marginTop:26,marginBottom:18}}>
+            <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:700,
+              textTransform:"uppercase",marginBottom:5}}>Reflexionsfragen</h2>
+            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
+              Gemeinsam im Krisenstab besprechen. Die Hinweise stammen aus eurem eigenen Protokoll.
+            </p>
+          </div>
+
+          <Q num="01" title="Was war der Plan?"
+            hint={S.session.notes ? `Lernziele: ${S.session.notes.slice(0,130)}${S.session.notes.length>130?"…":""}`
+              : "Welche Strategie hatte die Gruppe zu Spielbeginn? Was sollte Vorrang haben?"}
+            value={S.aar.planned} onChange={v=>up(p=>({aar:{...p.aar,planned:v}}))}/>
+
+          <Q num="02" title="Was ist tatsächlich passiert?"
+            hint={allEv.length ? `${allEv.length} Ereignisse protokolliert: ${[...new Set(allEv.map(e=>e.type))].join(", ")}. Welche waren spielentscheidend?`
+              : "Welche Ereignisse haben den Ausgang bestimmt?"}
+            value={S.aar.happened} onChange={v=>up(p=>({aar:{...p.aar,happened:v}}))}/>
+
+          <Q num="03" title="Was lief gut?"
+            hint="Gelungene Koordination, wirksames Ressourcenmanagement, kluge Priorisierung unter Zeitdruck."
+            value={S.aar.wentWell} onChange={v=>up(p=>({aar:{...p.aar,wentWell:v}}))}/>
+
+          <Q num="04" title="Was lief schlecht oder war überraschend schwierig?"
+            hint={[
+              lowConf.length && `Niedrige Entscheidungssicherheit: ${lowConf.join(", ")}.`,
+              sum.deaths>0 && `${sum.deaths} Todesfälle.`,
+              sum.upr>0 && `${sum.upr} Aufstände.`,
+              unused.length && `Nie genutzt: ${unused.join(", ")}.`,
+              restTotal===0 && "Keine einzige Erholungspause.",
+            ].filter(Boolean).join(" ") || "Wo lag der Krisenstab falsch?"}
+            value={S.aar.wentPoorly} onChange={v=>up(p=>({aar:{...p.aar,wentPoorly:v}}))}/>
+
+          <Q num="05" title="Was würden wir beim nächsten Mal anders machen?"
+            hint="Konkrete Änderungen — im Spiel wie in der realen Stabsarbeit."
+            value={S.aar.different} onChange={v=>up(p=>({aar:{...p.aar,different:v}}))}/>
+
+          {S.session.zielkarten && (
+            <Q num="5a" title="Haben Einzelinteressen die Gruppenentscheidung beeinflusst?"
+              hint="Die Ziel-Karten simulieren divergierende Interessen im Krisenstab. Wann hat jemand für sein Viertel statt für die Stadt entschieden — und wurde das bemerkt?"
+              value={S.aar.zielReflex||""} onChange={v=>up(p=>({aar:{...p.aar,zielReflex:v}}))}/>
+          )}
+
+          <Q num="06" title="Transfer: Was bedeutet das für die reale Krisenvorsorge?"
+            hint="Was nehmen die Teilnehmenden konkret mit in ihre Organisation? Welche Vorsorgelücke ist im Spiel sichtbar geworden?"
+            value={S.aar.transfer} onChange={v=>up(p=>({aar:{...p.aar,transfer:v}}))}/>
+
+          <div className="no-print" style={{display:"flex",gap:10,marginTop:10,marginBottom:48,flexWrap:"wrap"}}>
+            <button className="btn" onClick={()=>window.print()}>⎙ AAR drucken / als PDF speichern</button>
+            <button className="btn ghost" onClick={exportJSON}>⤓ Rohdaten als JSON</button>
+          </div>
+        </div>
+      </>
+    );
+  }
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
